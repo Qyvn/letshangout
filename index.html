@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Let's Hang Out — Vote &amp; Pull Up</title>
+  <meta name="description" content="Good people. Great vibes. Unforgettable moments. Vote the next hangout and pull up — Let's Hang Out." />
+  <meta name="theme-color" content="#12082A" />
+  <link rel="icon" href="favicon.jpg" type="image/jpeg" />
+  <link rel="apple-touch-icon" href="logo-512.jpg" />
+  <meta property="og:title" content="Let's Hang Out — Vote &amp; Pull Up" />
+  <meta property="og:description" content="Drop an idea, say why, vote, and pull up. Life happens. Memories are made. People come together." />
+  <meta property="og:image" content="https://qyvn.github.io/letshangout/logo.jpg" />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #070414;
+      --bg-2: #12082A;
+      --ink: #F7F3FF;
+      --muted: #C9B8E8;
+      --fb: #1877F2;
+      --ig-1: #833AB4;
+      --ig-2: #E1306C;
+      --ig-3: #F77737;
+      --ig-4: #FCAF45;
+      --wa: #25D366;
+      --x: #000000;
+      --glass: rgba(18, 8, 42, 0.72);
+      --stroke: rgba(255, 255, 255, 0.12);
+      --radius: 22px;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Outfit, system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -20%;
+      z-index: -1;
+      background:
+        radial-gradient(40% 35% at 50% 0%, rgba(131, 58, 180, 0.55), transparent 70%),
+        radial-gradient(30% 30% at 10% 30%, rgba(24, 119, 242, 0.32), transparent 70%),
+        radial-gradient(35% 30% at 90% 25%, rgba(37, 211, 102, 0.22), transparent 70%),
+        radial-gradient(40% 40% at 70% 80%, rgba(225, 48, 108, 0.28), transparent 75%),
+        radial-gradient(30% 30% at 20% 90%, rgba(252, 175, 69, 0.16), transparent 70%),
+        var(--bg-2);
+      pointer-events: none;
+    }
+    .wrap {
+      width: min(760px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 80px;
+    }
+    header { text-align: center; }
+    .logo-wrap {
+      width: min(220px, 62vw);
+      margin: 0 auto 14px;
+      filter: drop-shadow(0 0 28px rgba(225, 48, 108, 0.45)) drop-shadow(0 0 48px rgba(24, 119, 242, 0.3));
+    }
+    .logo-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 28px;
+    }
+    h1 {
+      font-family: "Bricolage Grotesque", Outfit, sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-size: clamp(1.8rem, 6vw, 2.6rem);
+      margin: 0 0 8px;
+      line-height: 1.05;
+    }
+    .tag {
+      color: var(--muted);
+      font-size: 1.02rem;
+      margin: 0 auto 6px;
+      max-width: 26rem;
+      line-height: 1.45;
+    }
+    .hook {
+      margin: 10px 0 0;
+      font-weight: 700;
+      font-size: 1.08rem;
+    }
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 28px 0 22px;
+      padding: 6px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      backdrop-filter: blur(16px);
+    }
+    .tabs button {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+      padding: 12px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .tabs button[aria-selected="true"] {
+      background: linear-gradient(90deg, var(--ig-1), var(--ig-2) 45%, var(--ig-3) 75%, var(--ig-4));
+      color: #fff;
+    }
+    .tabs button:focus-visible, .btn:focus-visible, .sort button:focus-visible, .vote-btn:focus-visible {
+      outline: 2px solid var(--ig-4);
+      outline-offset: 2px;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      padding: 18px 16px 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-family: "Bricolage Grotesque", Outfit, sans-serif;
+      font-size: 1.25rem;
+      margin: 0 0 6px;
+      letter-spacing: -0.02em;
+    }
+    .card p.lead, .empty, .hint {
+      color: var(--muted);
+      margin: 0 0 14px;
+      line-height: 1.5;
+    }
+    .why-note {
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #1a0b10;
+      background: linear-gradient(90deg, var(--ig-4), var(--ig-3));
+      border-radius: 999px;
+      padding: 3px 9px;
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.92rem;
+      margin: 12px 0 6px;
+    }
+    input, textarea, select {
+      width: 100%;
+      font: inherit;
+      font-size: 16px;
+      color: var(--ink);
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      padding: 13px 14px;
+      outline: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 3px rgba(131, 58, 180, 0.35);
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0 12px;
+    }
+    @media (min-width: 560px) {
+      .row.two { grid-template-columns: 1fr 1fr; }
+    }
+    .btn {
+      appearance: none;
+      border: 0;
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 700;
+      font-size: 1.02rem;
+      cursor: pointer;
+      color: #fff;
+    }
+    .btn:disabled { opacity: 0.65; cursor: wait; }
+    .btn-ig {
+      background: linear-gradient(90deg, var(--ig-1), var(--ig-2) 45%, var(--ig-3) 75%, var(--ig-4));
+    }
+    .btn-wa { background: var(--wa); color: #06210f; }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 2px 12px;
+    }
+    .toolbar h2 {
+      font-family: "Bricolage Grotesque", Outfit, sans-serif;
+      font-size: 1.15rem;
+      margin: 0;
+    }
+    .sort {
+      display: flex;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+    }
+    .sort button {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .sort button[aria-pressed="true"] {
+      background: var(--fb);
+      color: #fff;
+    }
+    .idea {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+    .idea h3 {
+      font-family: "Bricolage Grotesque", Outfit, sans-serif;
+      margin: 0 0 6px;
+      font-size: 1.12rem;
+      letter-spacing: -0.02em;
+    }
+    .reason {
+      margin: 0 0 8px;
+      line-height: 1.5;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+    .vote-btn {
+      appearance: none;
+      border: 1px solid var(--stroke);
+      background: #000;
+      color: #fff;
+      min-width: 74px;
+      border-radius: 16px;
+      padding: 10px 10px 8px;
+      cursor: pointer;
+      text-align: center;
+      font: inherit;
+    }
+    .vote-btn strong { display: block; font-size: 1.15rem; line-height: 1.1; }
+    .vote-btn span { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #bbb; }
+    .vote-btn.done {
+      background: var(--wa);
+      color: #06210f;
+      border-color: transparent;
+    }
+    .vote-btn.done span { color: #0b3d1c; }
+    .vote-btn:disabled { cursor: default; }
+    .hangout {
+      background:
+        linear-gradient(135deg, rgba(24, 119, 242, 0.28), rgba(131, 58, 180, 0.2) 50%, rgba(37, 211, 102, 0.15));
+    }
+    .hangout .kicker {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ig-4);
+      margin: 0 0 6px;
+    }
+    .hangout h2 { font-size: 1.4rem; }
+    .pill {
+      display: inline-block;
+      margin: 4px 6px 0 0;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--stroke);
+      font-size: 0.9rem;
+    }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(20px);
+      background: #000;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      padding: 12px 18px;
+      max-width: min(92vw, 420px);
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.25s ease;
+      z-index: 20;
+      box-shadow: var(--shadow);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.ok { background: #0b3d1c; }
+    .toast.err { background: #4a1020; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      margin-top: 28px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+    footer a { color: var(--ink); }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      border: 0;
+    }
+    .hp { position: absolute; left: -9999px; height: 0; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo-wrap">
+        <img src="logo.jpg" width="640" height="640" alt="Let's Hang Out logo" />
+      </div>
+      <h1>Let's Hang Out</h1>
+      <p class="tag">Good people. Great vibes. Unforgettable moments.</p>
+      <p class="hook">Pull up, let's hang out! 🖤</p>
+    </header>
+
+    <div class="tabs" role="tablist" aria-label="Let's Hang Out">
+      <button type="button" role="tab" id="tab-vote" aria-controls="panel-vote" aria-selected="true" data-tab="vote">Vote the next hangout</button>
+      <button type="button" role="tab" id="tab-pullup" aria-controls="panel-pullup" aria-selected="false" data-tab="pullup">Pull up</button>
+    </div>
+
+    <section class="panel active" id="panel-vote" role="tabpanel" aria-labelledby="tab-vote">
+      <div class="card">
+        <h2>Drop your hangout idea</h2>
+        <p class="lead">Don't just toss a suggestion in a box. Tell us what you want us to do next — and why it would slap.</p>
+        <form id="idea-form">
+          <div class="hp" aria-hidden="true">
+            <label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          </div>
+          <div class="row two">
+            <div>
+              <label for="idea-name">Your name or nickname</label>
+              <input id="idea-name" name="display_name" maxlength="60" required autocomplete="nickname" placeholder="e.g. Zee" />
+            </div>
+            <div>
+              <label for="idea-text">The idea</label>
+              <input id="idea-text" name="idea" maxlength="280" required placeholder="e.g. Spin the bottle at the lounge" />
+            </div>
+          </div>
+          <span class="why-note">Why is required — that's the whole point</span>
+          <label for="idea-reason">Why should we do this?</label>
+          <textarea id="idea-reason" name="reason" maxlength="500" required minlength="4" placeholder="Why would this go off? Keep it real."></textarea>
+          <button class="btn btn-ig" type="submit" id="idea-submit">Drop this idea</button>
+        </form>
+      </div>
+
+      <div class="toolbar">
+        <h2>The board</h2>
+        <div class="sort" role="group" aria-label="Sort ideas">
+          <button type="button" id="sort-votes" aria-pressed="true">Most votes</button>
+          <button type="button" id="sort-new" aria-pressed="false">Newest</button>
+        </div>
+      </div>
+      <div id="ideas"></div>
+    </section>
+
+    <section class="panel" id="panel-pullup" role="tabpanel" aria-labelledby="tab-pullup" hidden>
+      <div class="card hangout" id="hangout-card">
+        <p class="kicker">Next hangout</p>
+        <h2 id="hangout-title">Nothing locked in just yet</h2>
+        <p class="lead" id="hangout-copy">The next session isn't up on the board, but you can still count yourself in. We'll shout when it's on.</p>
+        <div id="hangout-meta"></div>
+      </div>
+
+      <div class="card">
+        <h2>I'm pulling up</h2>
+        <p class="lead">Leave your details so we know you're coming. Keep it simple — name, WhatsApp, and how many people you're rolling with.</p>
+        <form id="pullup-form">
+          <div class="hp" aria-hidden="true">
+            <label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          </div>
+          <div class="row two">
+            <div>
+              <label for="pu-name">Your name</label>
+              <input id="pu-name" name="display_name" maxlength="60" required autocomplete="name" placeholder="Name or nickname" />
+            </div>
+            <div>
+              <label for="pu-phone">WhatsApp / cell</label>
+              <input id="pu-phone" name="phone" maxlength="20" required inputmode="tel" autocomplete="tel" placeholder="e.g. 082 000 0000" />
+            </div>
+          </div>
+          <div class="row two">
+            <div>
+              <label for="pu-guests">How many people are you bringing?</label>
+              <input id="pu-guests" name="guests_bringing" type="number" min="0" max="20" step="1" value="0" required />
+              <p class="hint">0 means it's just you. Add your crew on top of that.</p>
+            </div>
+            <div>
+              <label for="pu-handle">Instagram or TikTok <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+              <input id="pu-handle" name="handle" maxlength="60" autocomplete="off" placeholder="@yourhandle" />
+            </div>
+          </div>
+          <label for="pu-note">Anything we should know? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+          <textarea id="pu-note" name="note" maxlength="300" placeholder="Allergies, plus-one names, you'll be late... whatever."></textarea>
+          <button class="btn btn-wa" type="submit" id="pullup-submit">I'm pulling up 🖤</button>
+        </form>
+      </div>
+    </section>
+
+    <footer>
+      Life happens. Memories are made. People come together.<br />
+      <a href="https://www.youtube.com/@LetsHangout_sa" target="_blank" rel="noopener">YouTube @LetsHangout_sa</a>
+    </footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      const SUPABASE_URL = "https://xmoinnxegwmiendnwnlh.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_7tLu9rXA2Bi6aNdcL8auyg_q7QZO55w";
+      const VOTER_KEY = "lho_voter_id";
+      const VOTED_KEY = "lho_voted_ids";
+      const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      const state = {
+        sort: "votes",
+        voted: new Set(),
+        voterId: null,
+        suggestions: [],
+      };
+
+      function voterId() {
+        let id = localStorage.getItem(VOTER_KEY);
+        if (!id || !/^[A-Za-z0-9_-]{8,80}$/.test(id)) {
+          id = (crypto.randomUUID && crypto.randomUUID().replace(/-/g, "")) ||
+            (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36));
+          localStorage.setItem(VOTER_KEY, id);
+        }
+        return id;
+      }
+
+      function loadVoted() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(VOTED_KEY) || "[]");
+          state.voted = new Set(Array.isArray(raw) ? raw : []);
+        } catch (e) {
+          state.voted = new Set();
+        }
+      }
+
+      function saveVoted() {
+        localStorage.setItem(VOTED_KEY, JSON.stringify([...state.voted]));
+      }
+
+      function toast(msg, kind) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.className = "toast show " + (kind || "");
+        clearTimeout(toast._t);
+        toast._t = setTimeout(function () { el.classList.remove("show"); }, 3200);
+      }
+
+      function escapeText(value) {
+        return String(value == null ? "" : value);
+      }
+
+      function timeAgo(iso) {
+        const t = new Date(iso).getTime();
+        if (!t) return "";
+        const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+        if (s < 60) return "just now";
+        if (s < 3600) return Math.floor(s / 60) + "m ago";
+        if (s < 86400) return Math.floor(s / 3600) + "h ago";
+        if (s < 604800) return Math.floor(s / 86400) + "d ago";
+        return new Date(iso).toLocaleDateString();
+      }
+
+      function switchTab(name) {
+        const vote = name !== "pullup";
+        document.getElementById("panel-vote").classList.toggle("active", vote);
+        document.getElementById("panel-pullup").classList.toggle("active", !vote);
+        document.getElementById("panel-vote").hidden = !vote;
+        document.getElementById("panel-pullup").hidden = vote;
+        document.getElementById("tab-vote").setAttribute("aria-selected", vote ? "true" : "false");
+        document.getElementById("tab-pullup").setAttribute("aria-selected", vote ? "false" : "true");
+        if (location.hash !== (vote ? "#vote" : "#pullup")) {
+          history.replaceState(null, "", vote ? "#vote" : "#pullup");
+        }
+      }
+
+      function renderIdeas() {
+        const root = document.getElementById("ideas");
+        root.innerHTML = "";
+        const rows = state.suggestions.slice();
+        if (state.sort === "votes") {
+          rows.sort(function (a, b) {
+            return (b.vote_count - a.vote_count) || (new Date(b.created_at) - new Date(a.created_at));
+          });
+        } else {
+          rows.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+        }
+        if (!rows.length) {
+          const empty = document.createElement("div");
+          empty.className = "card empty";
+          empty.textContent = "Board's still empty. Be first — drop an idea and tell us why.";
+          root.appendChild(empty);
+          return;
+        }
+        rows.forEach(function (row) {
+          const card = document.createElement("article");
+          card.className = "card idea";
+          const body = document.createElement("div");
+          const h3 = document.createElement("h3");
+          h3.textContent = escapeText(row.idea);
+          const reason = document.createElement("p");
+          reason.className = "reason";
+          reason.textContent = escapeText(row.reason);
+          const meta = document.createElement("p");
+          meta.className = "meta";
+          meta.textContent = "from " + escapeText(row.display_name) + " · " + timeAgo(row.created_at);
+          body.append(h3, reason, meta);
+          const voted = state.voted.has(row.id);
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "vote-btn" + (voted ? " done" : "");
+          btn.disabled = voted;
+          btn.dataset.id = row.id;
+          const count = document.createElement("strong");
+          count.textContent = String(row.vote_count || 0);
+          const label = document.createElement("span");
+          label.textContent = voted ? "Voted" : "Vote";
+          btn.append(count, label);
+          if (!voted) btn.addEventListener("click", function () { voteFor(row.id, btn); });
+          card.append(body, btn);
+          root.appendChild(card);
+        });
+      }
+
+      async function loadSuggestions() {
+        const { data, error } = await db
+          .from("lho_suggestions")
+          .select("id, display_name, idea, reason, vote_count, created_at")
+          .order("vote_count", { ascending: false })
+          .order("created_at", { ascending: false });
+        if (error) {
+          toast("Couldn't load the board. Try refresh.", "err");
+          return;
+        }
+        state.suggestions = data || [];
+        renderIdeas();
+      }
+
+      async function loadHangout() {
+        const { data, error } = await db
+          .from("lho_settings")
+          .select("next_title, next_date, next_place")
+          .eq("id", 1)
+          .maybeSingle();
+        if (error || !data) return;
+        const has = !!(data.next_title || data.next_date || data.next_place);
+        const title = document.getElementById("hangout-title");
+        const copy = document.getElementById("hangout-copy");
+        const meta = document.getElementById("hangout-meta");
+        meta.innerHTML = "";
+        if (!has) {
+          title.textContent = "Nothing locked in just yet";
+          copy.textContent = "The next session isn't up on the board, but you can still count yourself in. We'll shout when it's on.";
+          return;
+        }
+        title.textContent = data.next_title || "Next hangout";
+        copy.textContent = "You're confirming you'll pull up for this one.";
+        if (data.next_date) {
+          const p = document.createElement("span");
+          p.className = "pill";
+          p.textContent = data.next_date;
+          meta.appendChild(p);
+        }
+        if (data.next_place) {
+          const p = document.createElement("span");
+          p.className = "pill";
+          p.textContent = data.next_place;
+          meta.appendChild(p);
+        }
+      }
+
+      async function voteFor(id, btn) {
+        if (state.voted.has(id)) return;
+        btn.disabled = true;
+        const { error } = await db.from("lho_votes").insert({
+          suggestion_id: id,
+          voter_id: state.voterId,
+        });
+        if (error) {
+          if ((error.message || "").toLowerCase().includes("duplicate") || error.code === "23505") {
+            state.voted.add(id);
+            saveVoted();
+            toast("You've already voted for this one, sharp.", "ok");
+            loadSuggestions();
+            return;
+          }
+          btn.disabled = false;
+          toast("Eish, that vote didn't land. Try again now-now.", "err");
+          return;
+        }
+        state.voted.add(id);
+        saveVoted();
+        toast("Vote's in. Let's see if the crew fw this.", "ok");
+        loadSuggestions();
+      }
+
+      function honeypotFilled(form) {
+        const trap = form.elements.website;
+        return trap && String(trap.value || "").trim().length > 0;
+      }
+
+      document.getElementById("idea-form").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        if (honeypotFilled(form)) return;
+        const display_name = form.display_name.value.trim();
+        const idea = form.idea.value.trim();
+        const reason = form.reason.value.trim();
+        if (reason.length < 4) {
+          toast("Give us a real why — a few words at least.", "err");
+          return;
+        }
+        const btn = document.getElementById("idea-submit");
+        btn.disabled = true;
+        const { error } = await db.from("lho_suggestions").insert({
+          display_name, idea, reason, submitter_id: state.voterId,
+        });
+        btn.disabled = false;
+        if (error) {
+          if ((error.message || "").includes("rate_limited")) {
+            toast("Easy there — you've dropped enough ideas for today.", "err");
+            return;
+          }
+          toast("Eish, that didn't go through. Try again now-now.", "err");
+          return;
+        }
+        form.reset();
+        toast("It's in! Let's see if the crew fw this.", "ok");
+        loadSuggestions();
+      });
+
+      document.getElementById("pullup-form").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        if (honeypotFilled(form)) return;
+        const display_name = form.display_name.value.trim();
+        const phone = form.phone.value.trim();
+        const guests_bringing = Number(form.guests_bringing.value);
+        const handle = form.handle.value.trim() || null;
+        const note = form.note.value.trim() || null;
+        if (!/^[0-9+() ./-]{7,20}$/.test(phone)) {
+          toast("That number looks off. Use a WhatsApp or cell number.", "err");
+          return;
+        }
+        if (!Number.isInteger(guests_bringing) || guests_bringing < 0 || guests_bringing > 20) {
+          toast("Guests should be a number between 0 and 20.", "err");
+          return;
+        }
+        const btn = document.getElementById("pullup-submit");
+        btn.disabled = true;
+        const { error } = await db.from("lho_pullups").insert({
+          display_name, phone, guests_bringing, handle, note, submitter_id: state.voterId,
+        });
+        btn.disabled = false;
+        if (error) {
+          if ((error.message || "").includes("rate_limited")) {
+            toast("You're already on the list plenty for today.", "err");
+            return;
+          }
+          toast("Eish, that didn't go through. Try again now-now.", "err");
+          return;
+        }
+        form.reset();
+        form.guests_bringing.value = "0";
+        toast("You're on the list. Pull up, let's hang out! 🖤", "ok");
+      });
+
+      document.querySelectorAll(".tabs [data-tab]").forEach(function (btn) {
+        btn.addEventListener("click", function () { switchTab(btn.dataset.tab); });
+      });
+      document.getElementById("sort-votes").addEventListener("click", function () {
+        state.sort = "votes";
+        this.setAttribute("aria-pressed", "true");
+        document.getElementById("sort-new").setAttribute("aria-pressed", "false");
+        renderIdeas();
+      });
+      document.getElementById("sort-new").addEventListener("click", function () {
+        state.sort = "new";
+        this.setAttribute("aria-pressed", "true");
+        document.getElementById("sort-votes").setAttribute("aria-pressed", "false");
+        renderIdeas();
+      });
+      window.addEventListener("hashchange", function () {
+        switchTab(location.hash === "#pullup" ? "pullup" : "vote");
+      });
+
+      state.voterId = voterId();
+      loadVoted();
+      switchTab(location.hash === "#pullup" ? "pullup" : "vote");
+      loadSuggestions();
+      loadHangout();
+    })();
+  </script>
+</body>
+</html>
