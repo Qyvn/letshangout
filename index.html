@@ -96,8 +96,8 @@
     }
     .tabs {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
       margin: 28px 0 22px;
       padding: 6px;
       background: rgba(0, 0, 0, 0.35);
@@ -112,7 +112,8 @@
       color: var(--ink);
       font: inherit;
       font-weight: 700;
-      padding: 12px 10px;
+      font-size: 0.95rem;
+      padding: 11px 8px;
       border-radius: 999px;
       cursor: pointer;
       transition: transform 0.15s ease, background 0.15s ease;
@@ -263,27 +264,79 @@
       color: var(--muted);
       font-size: 0.86rem;
     }
+    .tally {
+      margin: 10px 0 0;
+      font-weight: 700;
+      font-size: 1.02rem;
+    }
+    .tally .in { color: var(--wa); }
+    .tally .out { color: #ff8fab; }
+    .vote-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 98px;
+    }
     .vote-btn {
       appearance: none;
       border: 1px solid var(--stroke);
       background: #000;
       color: #fff;
-      min-width: 74px;
-      border-radius: 16px;
-      padding: 10px 10px 8px;
+      border-radius: 14px;
+      padding: 10px 12px;
       cursor: pointer;
       text-align: center;
       font: inherit;
+      font-weight: 700;
     }
-    .vote-btn strong { display: block; font-size: 1.15rem; line-height: 1.1; }
-    .vote-btn span { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #bbb; }
-    .vote-btn.done {
+    .vote-btn:disabled { cursor: default; opacity: 0.85; }
+    .vote-btn.in.mine {
       background: var(--wa);
       color: #06210f;
       border-color: transparent;
     }
-    .vote-btn.done span { color: #0b3d1c; }
-    .vote-btn:disabled { cursor: default; }
+    .vote-btn.out.mine {
+      background: var(--ig-2);
+      color: #fff;
+      border-color: transparent;
+    }
+    .vote-status {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+    .event-list { display: flex; flex-direction: column; gap: 0; }
+    .event-card h3 {
+      font-family: "Bricolage Grotesque", Outfit, sans-serif;
+      font-size: 1.25rem;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .event-when {
+      margin: 0 0 6px;
+      font-weight: 700;
+      color: var(--ig-4);
+      font-size: 0.98rem;
+    }
+    .event-place {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+    .pull-link {
+      display: inline-block;
+      font-weight: 700;
+      text-decoration: none;
+      color: #06210f;
+      background: var(--wa);
+      border-radius: 999px;
+      padding: 10px 16px;
+    }
+    .pull-link:focus-visible {
+      outline: 2px solid var(--ig-4);
+      outline-offset: 2px;
+    }
     .hangout {
       background:
         linear-gradient(135deg, rgba(24, 119, 242, 0.28), rgba(131, 58, 180, 0.2) 50%, rgba(37, 211, 102, 0.15));
@@ -360,7 +413,8 @@
     </header>
 
     <div class="tabs" role="tablist" aria-label="Let's Hang Out">
-      <button type="button" role="tab" id="tab-vote" aria-controls="panel-vote" aria-selected="true" data-tab="vote">Vote the next hangout</button>
+      <button type="button" role="tab" id="tab-vote" aria-controls="panel-vote" aria-selected="true" data-tab="vote">Vote</button>
+      <button type="button" role="tab" id="tab-upcoming" aria-controls="panel-upcoming" aria-selected="false" data-tab="upcoming">Upcoming</button>
       <button type="button" role="tab" id="tab-pullup" aria-controls="panel-pullup" aria-selected="false" data-tab="pullup">Pull up</button>
     </div>
 
@@ -392,11 +446,19 @@
       <div class="toolbar">
         <h2>The board</h2>
         <div class="sort" role="group" aria-label="Sort ideas">
-          <button type="button" id="sort-votes" aria-pressed="true">Most votes</button>
+          <button type="button" id="sort-votes" aria-pressed="true">Top score</button>
           <button type="button" id="sort-new" aria-pressed="false">Newest</button>
         </div>
       </div>
       <div id="ideas"></div>
+    </section>
+
+    <section class="panel" id="panel-upcoming" role="tabpanel" aria-labelledby="tab-upcoming" hidden>
+      <div class="card">
+        <h2>Upcoming hangouts</h2>
+        <p class="lead">Here's what's on. Times are Johannesburg time.</p>
+      </div>
+      <div id="events" class="event-list"></div>
     </section>
 
     <section class="panel" id="panel-pullup" role="tabpanel" aria-labelledby="tab-pullup" hidden>
@@ -411,6 +473,7 @@
         <h2>I'm pulling up</h2>
         <p class="lead">Leave your details so we know you're coming. Keep it simple — name, WhatsApp, and how many people you're rolling with.</p>
         <form id="pullup-form">
+          <input type="hidden" name="event_id" id="pu-event-id" value="" />
           <div class="hp" aria-hidden="true">
             <label>Leave this empty <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
           </div>
@@ -454,14 +517,18 @@
       const SUPABASE_URL = "https://xmoinnxegwmiendnwnlh.supabase.co";
       const SUPABASE_KEY = "sb_publishable_7tLu9rXA2Bi6aNdcL8auyg_q7QZO55w";
       const VOTER_KEY = "lho_voter_id";
-      const VOTED_KEY = "lho_voted_ids";
+      const VOTED_KEY = "lho_voted_choices";
       const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+      const TZ = "Africa/Johannesburg";
       const state = {
         sort: "votes",
-        voted: new Set(),
+        voted: {},
         voterId: null,
         suggestions: [],
+        events: [],
+        selectedEventId: null,
+        settings: null,
       };
 
       function voterId() {
@@ -476,15 +543,20 @@
 
       function loadVoted() {
         try {
-          const raw = JSON.parse(localStorage.getItem(VOTED_KEY) || "[]");
-          state.voted = new Set(Array.isArray(raw) ? raw : []);
+          const raw = JSON.parse(localStorage.getItem(VOTED_KEY) || "{}");
+          state.voted = (raw && typeof raw === "object" && !Array.isArray(raw)) ? raw : {};
         } catch (e) {
-          state.voted = new Set();
+          state.voted = {};
         }
       }
 
       function saveVoted() {
-        localStorage.setItem(VOTED_KEY, JSON.stringify([...state.voted]));
+        localStorage.setItem(VOTED_KEY, JSON.stringify(state.voted));
+      }
+
+      function netScore(row) {
+        if (typeof row.net_score === "number") return row.net_score;
+        return (row.votes_in || 0) - (row.votes_out || 0);
       }
 
       function toast(msg, kind) {
@@ -510,17 +582,70 @@
         return new Date(iso).toLocaleDateString();
       }
 
-      function switchTab(name) {
-        const vote = name !== "pullup";
-        document.getElementById("panel-vote").classList.toggle("active", vote);
-        document.getElementById("panel-pullup").classList.toggle("active", !vote);
-        document.getElementById("panel-vote").hidden = !vote;
-        document.getElementById("panel-pullup").hidden = vote;
-        document.getElementById("tab-vote").setAttribute("aria-selected", vote ? "true" : "false");
-        document.getElementById("tab-pullup").setAttribute("aria-selected", vote ? "false" : "true");
-        if (location.hash !== (vote ? "#vote" : "#pullup")) {
-          history.replaceState(null, "", vote ? "#vote" : "#pullup");
+      function parseHash() {
+        const raw = (location.hash || "#vote").replace(/^#/, "");
+        const parts = raw.split("?");
+        const tabPart = parts[0] || "vote";
+        const params = new URLSearchParams(parts[1] || "");
+        let tab = "vote";
+        if (tabPart === "upcoming") tab = "upcoming";
+        else if (tabPart === "pullup") tab = "pullup";
+        return { tab: tab, eventId: params.get("event") };
+      }
+
+      function setHash(tab, eventId) {
+        let hash = "#" + tab;
+        if (tab === "pullup" && eventId) hash += "?event=" + encodeURIComponent(eventId);
+        if (location.hash !== hash) history.replaceState(null, "", hash);
+      }
+
+      function startOfTodayJhb() {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+          timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit"
+        }).format(new Date());
+        return new Date(parts + "T00:00:00+02:00");
+      }
+
+      function formatWhen(iso) {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return "";
+        const day = new Intl.DateTimeFormat("en-GB", {
+          timeZone: TZ, weekday: "long", day: "numeric", month: "short", year: "numeric"
+        }).format(d);
+        const time = new Intl.DateTimeFormat("en-GB", {
+          timeZone: TZ, hour: "numeric", minute: "2-digit", hour12: true
+        }).format(d);
+        return day + " · " + time.replace(/ /g, "").toLowerCase() + " SAST";
+      }
+
+      function upcomingEvents() {
+        const start = startOfTodayJhb().getTime();
+        return state.events
+          .filter(function (e) { return e.starts_at && new Date(e.starts_at).getTime() >= start; })
+          .sort(function (a, b) { return new Date(a.starts_at) - new Date(b.starts_at); });
+      }
+
+      function findEvent(id) {
+        if (!id) return null;
+        for (let i = 0; i < state.events.length; i++) {
+          if (state.events[i].id === id) return state.events[i];
         }
+        return null;
+      }
+
+      function switchTab(name, eventId) {
+        if (name !== "vote" && name !== "upcoming" && name !== "pullup") name = "vote";
+        if (name === "pullup" && eventId) state.selectedEventId = eventId;
+        ["vote", "upcoming", "pullup"].forEach(function (t) {
+          const on = t === name;
+          const panel = document.getElementById("panel-" + t);
+          const tab = document.getElementById("tab-" + t);
+          panel.classList.toggle("active", on);
+          panel.hidden = !on;
+          tab.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        setHash(name, name === "pullup" ? (eventId || state.selectedEventId) : null);
+        if (name === "pullup") renderHangoutCard();
       }
 
       function renderIdeas() {
@@ -529,7 +654,7 @@
         const rows = state.suggestions.slice();
         if (state.sort === "votes") {
           rows.sort(function (a, b) {
-            return (b.vote_count - a.vote_count) || (new Date(b.created_at) - new Date(a.created_at));
+            return (netScore(b) - netScore(a)) || ((b.votes_in || 0) - (a.votes_in || 0)) || (new Date(b.created_at) - new Date(a.created_at));
           });
         } else {
           rows.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
@@ -553,20 +678,42 @@
           const meta = document.createElement("p");
           meta.className = "meta";
           meta.textContent = "from " + escapeText(row.display_name) + " · " + timeAgo(row.created_at);
-          body.append(h3, reason, meta);
-          const voted = state.voted.has(row.id);
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "vote-btn" + (voted ? " done" : "");
-          btn.disabled = voted;
-          btn.dataset.id = row.id;
-          const count = document.createElement("strong");
-          count.textContent = String(row.vote_count || 0);
-          const label = document.createElement("span");
-          label.textContent = voted ? "Voted" : "Vote";
-          btn.append(count, label);
-          if (!voted) btn.addEventListener("click", function () { voteFor(row.id, btn); });
-          card.append(body, btn);
+          const ins = row.votes_in || 0;
+          const outs = row.votes_out || 0;
+          const tally = document.createElement("p");
+          tally.className = "tally";
+          const inEl = document.createElement("span");
+          inEl.className = "in";
+          inEl.textContent = ins + " in";
+          const sep = document.createTextNode(", ");
+          const outEl = document.createElement("span");
+          outEl.className = "out";
+          outEl.textContent = outs + " out";
+          tally.append(inEl, sep, outEl);
+          body.append(h3, reason, meta, tally);
+
+          const choice = state.voted[row.id] === "in" || state.voted[row.id] === "out" ? state.voted[row.id] : null;
+          const locked = !!choice;
+          const actions = document.createElement("div");
+          actions.className = "vote-actions";
+          ["in", "out"].forEach(function (kind) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "vote-btn " + kind + (choice === kind ? " mine" : "");
+            btn.disabled = locked;
+            btn.textContent = kind === "in" ? "In" : "Out";
+            if (!locked) {
+              btn.addEventListener("click", function () { voteFor(row.id, kind); });
+            }
+            actions.appendChild(btn);
+          });
+          if (locked) {
+            const status = document.createElement("div");
+            status.className = "vote-status";
+            status.textContent = "You voted " + choice;
+            actions.appendChild(status);
+          }
+          card.append(body, actions);
           root.appendChild(card);
         });
       }
@@ -574,8 +721,9 @@
       async function loadSuggestions() {
         const { data, error } = await db
           .from("lho_suggestions")
-          .select("id, display_name, idea, reason, vote_count, created_at")
-          .order("vote_count", { ascending: false })
+          .select("id, display_name, idea, reason, votes_in, votes_out, net_score, created_at")
+          .order("net_score", { ascending: false })
+          .order("votes_in", { ascending: false })
           .order("created_at", { ascending: false });
         if (error) {
           toast("Couldn't load the board. Try refresh.", "err");
@@ -585,18 +733,70 @@
         renderIdeas();
       }
 
-      async function loadHangout() {
-        const { data, error } = await db
-          .from("lho_settings")
-          .select("next_title, next_date, next_place")
-          .eq("id", 1)
-          .maybeSingle();
-        if (error || !data) return;
-        const has = !!(data.next_title || data.next_date || data.next_place);
+      function renderEvents() {
+        const root = document.getElementById("events");
+        root.innerHTML = "";
+        const rows = upcomingEvents();
+        if (!rows.length) {
+          const empty = document.createElement("div");
+          empty.className = "card empty";
+          empty.textContent = "Nothing locked in just yet. When the next hangout is on, it'll show up here.";
+          root.appendChild(empty);
+          return;
+        }
+        rows.forEach(function (row) {
+          const card = document.createElement("article");
+          card.className = "card event-card";
+          const h3 = document.createElement("h3");
+          h3.textContent = escapeText(row.title);
+          const when = document.createElement("p");
+          when.className = "event-when";
+          when.textContent = formatWhen(row.starts_at);
+          const place = document.createElement("p");
+          place.className = "event-place";
+          place.textContent = row.place ? escapeText(row.place) : "Place still to be announced";
+          const link = document.createElement("a");
+          link.className = "pull-link";
+          link.href = "#pullup?event=" + encodeURIComponent(row.id);
+          link.textContent = "Pull up to this one";
+          link.addEventListener("click", function (ev) {
+            ev.preventDefault();
+            switchTab("pullup", row.id);
+          });
+          card.append(h3, when, place, link);
+          root.appendChild(card);
+        });
+      }
+
+      function renderHangoutCard() {
         const title = document.getElementById("hangout-title");
         const copy = document.getElementById("hangout-copy");
         const meta = document.getElementById("hangout-meta");
+        const hidden = document.getElementById("pu-event-id");
         meta.innerHTML = "";
+        const upcoming = upcomingEvents();
+        let ev = findEvent(state.selectedEventId);
+        if (!ev && upcoming.length) ev = upcoming[0];
+        if (ev) {
+          state.selectedEventId = ev.id;
+          hidden.value = ev.id;
+          title.textContent = ev.title;
+          copy.textContent = "You're confirming you'll pull up for this one.";
+          const when = document.createElement("span");
+          when.className = "pill";
+          when.textContent = formatWhen(ev.starts_at);
+          meta.appendChild(when);
+          if (ev.place) {
+            const p = document.createElement("span");
+            p.className = "pill";
+            p.textContent = ev.place;
+            meta.appendChild(p);
+          }
+          return;
+        }
+        hidden.value = "";
+        const data = state.settings || {};
+        const has = !!(data.next_title || data.next_date || data.next_place);
         if (!has) {
           title.textContent = "Nothing locked in just yet";
           copy.textContent = "The next session isn't up on the board, but you can still count yourself in. We'll shout when it's on.";
@@ -618,28 +818,50 @@
         }
       }
 
-      async function voteFor(id, btn) {
-        if (state.voted.has(id)) return;
-        btn.disabled = true;
+      async function loadEvents() {
+        const { data, error } = await db
+          .from("lho_events")
+          .select("id, title, starts_at, place")
+          .order("starts_at", { ascending: true });
+        if (error) {
+          toast("Couldn't load upcoming hangouts. Try refresh.", "err");
+          return;
+        }
+        state.events = data || [];
+        renderEvents();
+        renderHangoutCard();
+      }
+
+      async function loadHangout() {
+        const { data, error } = await db
+          .from("lho_settings")
+          .select("next_title, next_date, next_place")
+          .eq("id", 1)
+          .maybeSingle();
+        if (!error) state.settings = data || null;
+        renderHangoutCard();
+      }
+
+      async function voteFor(id, choice) {
+        if (choice !== "in" && choice !== "out") return;
+        if (state.voted[id] === "in" || state.voted[id] === "out") return;
         const { error } = await db.from("lho_votes").insert({
           suggestion_id: id,
           voter_id: state.voterId,
+          choice: choice,
         });
         if (error) {
-          if ((error.message || "").toLowerCase().includes("duplicate") || error.code === "23505") {
-            state.voted.add(id);
-            saveVoted();
-            toast("You've already voted for this one, sharp.", "ok");
+          if ((error.message || "").toLowerCase().includes("duplicate") || error.code === "23505" || (error.message || "").includes("votes_locked") || (error.message || "").includes("votes are locked")) {
+            toast("That vote is locked. One vote per idea, no switching.", "ok");
             loadSuggestions();
             return;
           }
-          btn.disabled = false;
           toast("Eish, that vote didn't land. Try again now-now.", "err");
           return;
         }
-        state.voted.add(id);
+        state.voted[id] = choice;
         saveVoted();
-        toast("Vote's in. Let's see if the crew fw this.", "ok");
+        toast(choice === "in" ? "You voted in. It's locked in." : "You voted out. It's locked in.", "ok");
         loadSuggestions();
       }
 
@@ -697,9 +919,10 @@
         }
         const btn = document.getElementById("pullup-submit");
         btn.disabled = true;
-        const { error } = await db.from("lho_pullups").insert({
-          display_name, phone, guests_bringing, handle, note, submitter_id: state.voterId,
-        });
+        const event_id = (form.event_id && form.event_id.value) || state.selectedEventId || null;
+        const payload = { display_name, phone, guests_bringing, handle, note, submitter_id: state.voterId };
+        if (event_id) payload.event_id = event_id;
+        const { error } = await db.from("lho_pullups").insert(payload);
         btn.disabled = false;
         if (error) {
           if ((error.message || "").includes("rate_limited")) {
@@ -711,6 +934,7 @@
         }
         form.reset();
         form.guests_bringing.value = "0";
+        renderHangoutCard();
         toast("You're on the list. Pull up, let's hang out! 🖤", "ok");
       });
 
@@ -730,13 +954,17 @@
         renderIdeas();
       });
       window.addEventListener("hashchange", function () {
-        switchTab(location.hash === "#pullup" ? "pullup" : "vote");
+        const now = parseHash();
+        switchTab(now.tab, now.eventId);
       });
 
       state.voterId = voterId();
       loadVoted();
-      switchTab(location.hash === "#pullup" ? "pullup" : "vote");
+      const start = parseHash();
+      if (start.eventId) state.selectedEventId = start.eventId;
+      switchTab(start.tab, start.eventId);
       loadSuggestions();
+      loadEvents();
       loadHangout();
     })();
   </script>
